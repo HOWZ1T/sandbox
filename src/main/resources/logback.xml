@@ -1,0 +1,4 @@
+<configuration>
+    <root level="debug"/>
+    <logger name="org.hexworks.zircon.internal.application.SwingApplication" level="warn"/>
+</configuration>
