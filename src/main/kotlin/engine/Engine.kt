@@ -24,7 +24,7 @@ class Engine(
     private var tileSize: Int = 0
 
     private var view: BaseView? = null
-    private var previosView: BaseView? = null
+    private var previousView: BaseView? = null
 
     private var tileset: TilesetResource
 
@@ -65,18 +65,18 @@ class Engine(
             this.view = view
             this.view!!.dock()
         } else {
-            this.previosView = this.view
+            this.previousView = this.view
             this.view!!.replaceWith(view)
         }
     }
 
     fun dockPreviousView() {
-        if (previosView == null) { return }
+        if (previousView == null) { return }
 
         val tmp = view!!
-        view!!.replaceWith(previosView!!)
-        view = previosView
-        previosView = tmp
+        view!!.replaceWith(previousView!!)
+        view = previousView
+        previousView = tmp
     }
 
     fun getView() : BaseView? {
