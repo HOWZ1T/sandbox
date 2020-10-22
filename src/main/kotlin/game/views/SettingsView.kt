@@ -6,14 +6,10 @@ import engine.ui.CheckboxRenderer
 import org.hexworks.zircon.api.ComponentDecorations
 import org.hexworks.zircon.api.Components
 import org.hexworks.zircon.api.Functions
-import org.hexworks.zircon.api.component.CheckBox
 import org.hexworks.zircon.api.component.ComponentAlignment
-import org.hexworks.zircon.api.component.renderer.ComponentRenderer
 import org.hexworks.zircon.api.graphics.BoxType
 import org.hexworks.zircon.api.uievent.ComponentEventType
 import org.hexworks.zircon.api.view.base.BaseView
-import org.hexworks.zircon.internal.component.impl.DefaultCheckBox
-import org.hexworks.zircon.internal.component.renderer.DefaultCheckBoxRenderer
 import java.util.function.Consumer
 
 class SettingsView(engine: Engine)

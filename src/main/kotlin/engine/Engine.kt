@@ -5,7 +5,6 @@ import org.hexworks.zircon.api.ColorThemes
 import org.hexworks.zircon.api.SwingApplications
 import org.hexworks.zircon.api.TrueTypeFontResources
 import org.hexworks.zircon.api.application.AppConfig
-import org.hexworks.zircon.api.builder.grid.TileGridBuilder
 import org.hexworks.zircon.api.component.ColorTheme
 import org.hexworks.zircon.api.grid.TileGrid
 import org.hexworks.zircon.api.resource.TilesetResource
