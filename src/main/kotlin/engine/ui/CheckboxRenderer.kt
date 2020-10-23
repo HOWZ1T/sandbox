@@ -25,6 +25,5 @@ class CheckboxRenderer : ComponentRenderer<CheckBox> {
             Pair(DefaultCheckBox.CheckBoxState.CHECKING, CHECKING_BUTTON),
             Pair(DefaultCheckBox.CheckBoxState.CHECKED, CHECKED_BUTTON),
             Pair(DefaultCheckBox.CheckBoxState.UNCHECKING, UNCHECKING_BUTTON))
-
     }
 }

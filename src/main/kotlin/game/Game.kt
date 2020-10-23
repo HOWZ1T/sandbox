@@ -6,7 +6,8 @@ import game.views.SettingsView
 import game.views.StartView
 
 fun main(args: Array<String>) {
-    val engine = Engine(Int2(80, 45), Int2(1280, 720), "Sandbox")
+    val title = "Sandbox"
+    val engine = Engine(Int2(80, 45), title)
     val settingsView = SettingsView(engine)
     val startView = StartView(engine, settingsView)
 

@@ -1,6 +1,7 @@
 package engine
 
 import engine.math.Int2
+import game.managers.SettingsManager
 import org.hexworks.zircon.api.ColorThemes
 import org.hexworks.zircon.api.SwingApplications
 import org.hexworks.zircon.api.TrueTypeFontResources
@@ -14,7 +15,6 @@ import kotlin.system.exitProcess
 
 class Engine(
     private var gridSize: Int2,
-    private var resolution: Int2,
     private var title: String = "Untitled",
     private var colorTheme: ColorTheme = ColorThemes.pabloNeruda(),
     private var fullscreen: Boolean = false
@@ -22,6 +22,7 @@ class Engine(
     private var tileGrid: TileGrid
     private var scrSize: Int2 = Int2(Toolkit.getDefaultToolkit().screenSize)
     private var tileSize: Int = 0
+    private var settingsManager = SettingsManager.getInstance(title)
 
     private var view: BaseView? = null
     private var previousView: BaseView? = null
@@ -29,10 +30,10 @@ class Engine(
     private var tileset: TilesetResource
 
     init {
-        tileSize = if (fullscreen) {
+        tileSize = if (settingsManager.settings.fullscreen) {
             scrSize.y / gridSize.y
         } else {
-            resolution.y / gridSize.y
+            settingsManager.settings.resolution.y / gridSize.y
         }
         tileset = TrueTypeFontResources.ibmBios(tileSize)
         this.tileGrid = SwingApplications.startTileGrid(
@@ -42,6 +43,7 @@ class Engine(
                 .withDefaultTileset(tileset)
                 .build()
         )
+        setColorTheme(settingsManager.settings.getTheme())
     }
 
     fun width() : Int {
@@ -58,6 +60,11 @@ class Engine(
 
     fun colorTheme() : ColorTheme {
         return this.colorTheme
+    }
+
+    fun setColorTheme(colorTheme: ColorTheme) {
+        this.colorTheme = colorTheme
+        getView()?.screen?.theme = this.colorTheme
     }
 
     fun dockView(view: BaseView) {
@@ -84,6 +91,7 @@ class Engine(
     }
 
     fun shutdown() {
+        settingsManager.save()
         exitProcess(0)
     }
 }
