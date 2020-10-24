@@ -5,15 +5,22 @@ import engine.Resolution
 import engine.text.centerPad
 import engine.ui.CheckboxRenderer
 import engine.managers.SettingsManager
+import engine.ui.BooleanModalResult
 import org.hexworks.zircon.api.ComponentDecorations
 import org.hexworks.zircon.api.Components
 import org.hexworks.zircon.api.Functions
+import org.hexworks.zircon.api.builder.component.ModalBuilder
 import org.hexworks.zircon.api.component.ColorTheme
 import org.hexworks.zircon.api.component.ComponentAlignment
+import org.hexworks.zircon.api.component.modal.Modal
+import org.hexworks.zircon.api.data.Size
 import org.hexworks.zircon.api.graphics.BoxType
+import org.hexworks.zircon.api.screen.Screen
 import org.hexworks.zircon.api.uievent.ComponentEventType
+import org.hexworks.zircon.api.uievent.Processed
 import org.hexworks.zircon.api.view.base.BaseView
 import org.hexworks.zircon.internal.component.impl.DefaultCheckBox
+import org.hexworks.zircon.internal.component.modal.EmptyModalResult
 import java.util.function.Consumer
 
 class SettingsView(engine: Engine) : BaseView(engine.tileGrid(), engine.colorTheme()) {
@@ -131,21 +138,58 @@ class SettingsView(engine: Engine) : BaseView(engine.tileGrid(), engine.colorThe
         }))
 
         btnBack.processComponentEvents(ComponentEventType.ACTIVATED, Functions.fromConsumer(Consumer {
-            screen.theme = settingsManager.settings.getTheme()
-            engine.dockPreviousView()
-            // TODO if settings changed, prompt user if they want to apply it with modal
-
-            // TODO: IF NOT SAVING
-            lblCurResolution.text = centerPad(settingsManager.settings.resolution.sizeAsStr(), 13)
-            lblCurTheme.text = centerPad(engine.colorThemeName(settingsManager.settings.getTheme()), 26)
-            chckBoxFullscreen.isSelected = settingsManager.settings.fullscreen
+            // have settings been changed ?
+            if (theme != settingsManager.settings.getTheme() || resolution != settingsManager.settings.resolution
+                || chckBoxFullscreen.isSelected != settingsManager.settings.fullscreen) {
+                // TODO
+                val modal = createDoApplyModal(screen, theme)
+                modal.onClosed {
+                    if (it.accepted()) {
+                        engine.setColorTheme(theme)
+                        settingsManager.settings.resolution = resolution
+                        settingsManager.settings.fullscreen = chckBoxFullscreen.isSelected
+                        // TODO NOTIFY OF REQUIRED RESTART
+                        engine.dockPreviousView()
+                    } else {
+                        screen.theme = settingsManager.settings.getTheme()
+                        lblCurResolution.text = centerPad(settingsManager.settings.resolution.sizeAsStr(), 13)
+                        lblCurTheme.text = centerPad(engine.colorThemeName(settingsManager.settings.getTheme()), 26)
+                        chckBoxFullscreen.isSelected = settingsManager.settings.fullscreen
+                        engine.dockPreviousView()
+                    }
+                }
+                screen.openModal(modal)
+            } else {
+                screen.theme = settingsManager.settings.getTheme()
+                lblCurResolution.text = centerPad(settingsManager.settings.resolution.sizeAsStr(), 13)
+                lblCurTheme.text = centerPad(engine.colorThemeName(settingsManager.settings.getTheme()), 26)
+                chckBoxFullscreen.isSelected = settingsManager.settings.fullscreen
+                engine.dockPreviousView()
+            }
         }))
 
         btnApply.processComponentEvents(ComponentEventType.ACTIVATED, Functions.fromConsumer(Consumer {
-            engine.setColorTheme(colorTheme) // sets theme in to settings too
-            settingsManager.settings.fullscreen = chckBoxFullscreen.checkBoxState == DefaultCheckBox.CheckBoxState.CHECKED
-            settingsManager.settings.resolution = resolution
-            // TODO prompt user to restart with modal
+            // have settings been changed ?
+            if (theme != settingsManager.settings.getTheme() || resolution != settingsManager.settings.resolution
+                || chckBoxFullscreen.isSelected != settingsManager.settings.fullscreen) {
+                engine.setColorTheme(colorTheme) // sets theme in to settings too
+                settingsManager.settings.fullscreen =
+                    chckBoxFullscreen.checkBoxState == DefaultCheckBox.CheckBoxState.CHECKED
+                settingsManager.settings.resolution = resolution
+                settingsManager.save()
+
+                val modal = createRestartRequiredModal(screen, colorTheme)
+                modal.onClosed {
+                    if (it.accepted()) {
+                        engine.shutdown()
+                    } else {
+                        engine.dockPreviousView()
+                    }
+                }
+                screen.openModal(modal)
+            } else {
+                engine.dockPreviousView()
+            }
         }))
         
         /* -- ADDING COMPONENTS -- */
@@ -156,5 +200,95 @@ class SettingsView(engine: Engine) : BaseView(engine.tileGrid(), engine.colorThe
 
         vboxSettings.addComponents(hboxResolution, hboxFullscreen, hboxTheme, hboxControls)
         screen.addComponents(vboxSettings)
+    }
+
+    private fun createDoApplyModal(screen: Screen, colorTheme: ColorTheme) : Modal<BooleanModalResult> {
+        val panel = Components.panel()
+            .withSize(Size.create(34, 8))
+            .withDecorations(ComponentDecorations.box(), ComponentDecorations.shadow())
+            .build()
+
+        val modal = ModalBuilder.newBuilder<BooleanModalResult>()
+            .withComponent(panel)
+            .withParentSize(screen.size)
+            .withColorTheme(colorTheme)
+            .build()
+
+        val paraMsg = Components.paragraph()
+            .withText("Do you want to apply changes?")
+            .withPosition(1, 1)
+            .withSize(29, 3)
+            .build()
+
+        val btnNo = Components.button()
+            .withText(" NO ")
+            .withAlignmentWithin(panel, ComponentAlignment.BOTTOM_LEFT)
+            .build().apply {
+                handleComponentEvents(ComponentEventType.ACTIVATED) {
+                    modal.close(BooleanModalResult(false))
+                    Processed
+                }
+            }
+        btnNo.moveRightBy(16)
+
+        val btnYes = Components.button()
+            .withText(" YES ")
+            .withAlignmentWithin(panel, ComponentAlignment.BOTTOM_RIGHT)
+            .build().apply {
+                handleComponentEvents(ComponentEventType.ACTIVATED) {
+                    modal.close(BooleanModalResult(true))
+                    Processed
+                }
+            }
+        btnYes.moveLeftBy(1)
+
+        panel.addComponents(paraMsg, btnNo, btnYes)
+        return modal
+    }
+
+    private fun createRestartRequiredModal(screen: Screen, colorTheme: ColorTheme) : Modal<BooleanModalResult> {
+        val panel = Components.panel()
+            .withSize(Size.create(34, 13))
+            .withDecorations(ComponentDecorations.box(), ComponentDecorations.shadow())
+            .build()
+
+        val modal = ModalBuilder.newBuilder<BooleanModalResult>()
+            .withComponent(panel)
+            .withParentSize(screen.size)
+            .withColorTheme(colorTheme)
+            .build()
+
+        val spaces = " ".repeat(29)
+        val paraMsg = Components.paragraph()
+            .withText("Restart Required for changes to take effect.              " + spaces +
+                    "Do you want to quit now?")
+            .withPosition(1, 1)
+            .withSize(29, 6)
+            .build()
+
+        val btnNo = Components.button()
+            .withText(" NO ")
+            .withAlignmentWithin(panel, ComponentAlignment.BOTTOM_LEFT)
+            .build().apply {
+                handleComponentEvents(ComponentEventType.ACTIVATED) {
+                    modal.close(BooleanModalResult(false))
+                    Processed
+                }
+            }
+        btnNo.moveRightBy(16)
+
+        val btnYes = Components.button()
+            .withText(" YES ")
+            .withAlignmentWithin(panel, ComponentAlignment.BOTTOM_RIGHT)
+            .build().apply {
+                handleComponentEvents(ComponentEventType.ACTIVATED) {
+                    modal.close(BooleanModalResult(true))
+                    Processed
+                }
+            }
+        btnYes.moveLeftBy(1)
+
+        panel.addComponents(paraMsg, btnNo, btnYes)
+        return modal
     }
 }
