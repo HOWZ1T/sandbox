@@ -12,7 +12,7 @@ import org.hexworks.zircon.api.view.base.BaseView
 import java.util.function.Consumer
 import kotlin.math.max
 
-class StartView(engine: Engine, settingsView: SettingsView)
+class StartView(engine: Engine, settingsView: SettingsView, playView: PlayView)
     : BaseView(engine.tileGrid(), engine.colorTheme()) {
     private var btnLabels: HashMap<String, String> = HashMap();
 
@@ -51,6 +51,10 @@ class StartView(engine: Engine, settingsView: SettingsView)
             .withAlignmentWithin(menu, ComponentAlignment.TOP_CENTER)
             .withDecorations(ComponentDecorations.box(BoxType.SINGLE))
             .build()
+
+        btnStart.processComponentEvents(ComponentEventType.ACTIVATED, fromConsumer(Consumer {
+            engine.dockView(playView)
+        }))
 
         val btnSettings = Components.button()
             .withText(btnLabels["settings"]!!)

@@ -16,8 +16,7 @@ import org.hexworks.zircon.api.view.base.BaseView
 import org.hexworks.zircon.internal.component.impl.DefaultCheckBox
 import java.util.function.Consumer
 
-class SettingsView(engine: Engine)
-    : BaseView(engine.tileGrid(), engine.colorTheme()) {
+class SettingsView(engine: Engine) : BaseView(engine.tileGrid(), engine.colorTheme()) {
     private var settingsManager: SettingsManager = SettingsManager.getInstance(engine.title())
     private lateinit var colorTheme: ColorTheme;
     private lateinit var resolution: Resolution;
@@ -135,6 +134,11 @@ class SettingsView(engine: Engine)
             screen.theme = settingsManager.settings.getTheme()
             engine.dockPreviousView()
             // TODO if settings changed, prompt user if they want to apply it with modal
+
+            // TODO: IF NOT SAVING
+            lblCurResolution.text = centerPad(settingsManager.settings.resolution.sizeAsStr(), 13)
+            lblCurTheme.text = centerPad(engine.colorThemeName(settingsManager.settings.getTheme()), 26)
+            chckBoxFullscreen.isSelected = settingsManager.settings.fullscreen
         }))
 
         btnApply.processComponentEvents(ComponentEventType.ACTIVATED, Functions.fromConsumer(Consumer {
@@ -143,7 +147,7 @@ class SettingsView(engine: Engine)
             settingsManager.settings.resolution = resolution
             // TODO prompt user to restart with modal
         }))
-
+        
         /* -- ADDING COMPONENTS -- */
         hboxResolution.addComponents(lblResolution, btnResolutionPrev, lblCurResolution, btnResolutionNext)
         hboxFullscreen.addComponents(lblFullscreen, chckBoxFullscreen)

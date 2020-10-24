@@ -203,7 +203,12 @@ class Engine(
         var i = (RESOLUTIONS[res] ?: error("could not find resolution")) - 1
         if (i < 0) i = RESOLUTIONS.size - 1
         else i %= RESOLUTIONS.size
-        return RESOLUTIONS.keys.elementAt(i)
+        var nextRes = RESOLUTIONS.keys.elementAt(i)
+        while (nextRes.size > scrSize) {
+           nextRes = RESOLUTIONS.keys.elementAt((--i) % RESOLUTIONS.size)
+            println("next: ${nextRes.size} vs scr: ${scrSize}")
+        }
+        return nextRes
     }
 
     fun colorThemeName(colTheme: ColorTheme) : String {
