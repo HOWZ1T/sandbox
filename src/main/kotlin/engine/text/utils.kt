@@ -2,7 +2,7 @@ package engine.text
 
 fun centerPad(str: String, targetWidth: Int, padChr: Char = ' ') : String {
     if (str.length >= targetWidth) {
-        return str
+        return str.substring(0, targetWidth-3) + "..."
     }
 
     val spacesCount = (targetWidth - str.length) / 2;

@@ -1,6 +1,7 @@
-package game.managers
+package engine.managers
 
-import engine.math.Int2
+import engine.RESOLUTIONS
+import engine.Resolution
 import engine.utils.SingletonHolder
 import org.hexworks.zircon.api.ColorThemes
 import org.hexworks.zircon.api.component.ColorTheme
@@ -10,7 +11,9 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 
-private val DefaultSettings = Settings(Int2(1280, 720), false, "PABLO_NERUDA")
+private val DefaultSettings = Settings(
+    RESOLUTIONS.keys.elementAt(1),
+    false, "PABLO_NERUDA")
 
 private fun themeFromName(name: String) : ColorTheme {
     for (theme in ColorThemeResource.values()) {
@@ -31,7 +34,7 @@ private fun themeToName(colorTheme: ColorTheme) : String {
     return "DEFAULT"
 }
 
-data class Settings(var resolution: Int2, var fullscreen: Boolean, private var colorThemeName: String) {
+data class Settings(var resolution: Resolution, var fullscreen: Boolean, private var colorThemeName: String) {
     private var colorTheme: ColorTheme = themeFromName(colorThemeName.toUpperCase())
 
     fun setTheme(colorTheme: ColorTheme) {
@@ -49,7 +52,7 @@ data class Settings(var resolution: Int2, var fullscreen: Boolean, private var c
     }
 
     override fun toString() : String {
-        return "resolution=${resolution.x}x${resolution.y}\nfullscreen=$fullscreen\ntheme=${colorThemeName.toUpperCase()}"
+        return "resolution=$resolution\nfullscreen=$fullscreen\ntheme=${colorThemeName.toUpperCase()}"
     }
 
     companion object {
@@ -62,8 +65,7 @@ data class Settings(var resolution: Int2, var fullscreen: Boolean, private var c
                 throw RuntimeException("settings file is malformed")
             }
 
-            val res = lines[0].split('=')[1].split('x')
-            val resolution = Int2(res[0].toInt(), res[1].toInt())
+            val resolution = Resolution.fromStr(lines[0])
             val fullscreen = lines[1].split('=')[1].toLowerCase() == "true"
             val theme = lines[2].split('=')[1]
 

@@ -1,20 +1,31 @@
 package game.views
 
 import engine.Engine
+import engine.Resolution
 import engine.text.centerPad
 import engine.ui.CheckboxRenderer
+import engine.managers.SettingsManager
 import org.hexworks.zircon.api.ComponentDecorations
 import org.hexworks.zircon.api.Components
 import org.hexworks.zircon.api.Functions
+import org.hexworks.zircon.api.component.ColorTheme
 import org.hexworks.zircon.api.component.ComponentAlignment
 import org.hexworks.zircon.api.graphics.BoxType
 import org.hexworks.zircon.api.uievent.ComponentEventType
 import org.hexworks.zircon.api.view.base.BaseView
+import org.hexworks.zircon.internal.component.impl.DefaultCheckBox
 import java.util.function.Consumer
 
 class SettingsView(engine: Engine)
     : BaseView(engine.tileGrid(), engine.colorTheme()) {
+    private var settingsManager: SettingsManager = SettingsManager.getInstance(engine.title())
+    private lateinit var colorTheme: ColorTheme;
+    private lateinit var resolution: Resolution;
+
     init {
+        colorTheme = settingsManager.settings.getTheme()
+        resolution = settingsManager.settings.resolution
+
         /* -- SETTINGS PANEL -- */
         val title = "Settings"
         val vboxSettings = Components.vbox()
@@ -38,7 +49,7 @@ class SettingsView(engine: Engine)
             .build()
 
         val lblCurResolution = Components.label()
-            .withText(centerPad("1920 x 1080", 13, ' '))
+            .withText(centerPad(resolution.sizeAsStr(), 13, ' '))
             .build()
 
         val btnResolutionNext = Components.button()
@@ -58,6 +69,8 @@ class SettingsView(engine: Engine)
             .withComponentRenderer(CheckboxRenderer())
             .build()
 
+        chckBoxFullscreen.isSelected = settingsManager.settings.fullscreen
+
         /* -- THEME CONTROL -- */
         val hboxTheme = Components.hbox()
             .withSize(54, 3)
@@ -71,7 +84,7 @@ class SettingsView(engine: Engine)
             .build()
 
         val lblCurTheme = Components.label()
-            .withText(centerPad("Solarized Light Magenta", 26))
+            .withText(centerPad(engine.colorThemeName(colorTheme), 26))
             .build()
 
         val btnThemeNext = Components.button()
@@ -95,8 +108,40 @@ class SettingsView(engine: Engine)
             .build()
 
         /* --   ADDING LOGIC    -- */
+
+        btnResolutionNext.processComponentEvents(ComponentEventType.ACTIVATED, Functions.fromConsumer(Consumer {
+            resolution = engine.nextResolution(resolution)
+            lblCurResolution.text = centerPad(resolution.sizeAsStr(), 13)
+        }))
+
+        btnResolutionPrev.processComponentEvents(ComponentEventType.ACTIVATED, Functions.fromConsumer(Consumer {
+            resolution = engine.prevResolution(resolution)
+            lblCurResolution.text = centerPad(resolution.sizeAsStr(), 13)
+        }))
+
+        btnThemeNext.processComponentEvents(ComponentEventType.ACTIVATED, Functions.fromConsumer(Consumer {
+            colorTheme = engine.nextColorTheme(colorTheme)
+            lblCurTheme.text = centerPad(engine.colorThemeName(colorTheme), 26)
+            screen.theme = colorTheme
+        }))
+
+        btnThemePrev.processComponentEvents(ComponentEventType.ACTIVATED, Functions.fromConsumer(Consumer {
+            colorTheme = engine.prevColorTheme(colorTheme)
+            lblCurTheme.text = centerPad(engine.colorThemeName(colorTheme), 26)
+            screen.theme = colorTheme
+        }))
+
         btnBack.processComponentEvents(ComponentEventType.ACTIVATED, Functions.fromConsumer(Consumer {
+            screen.theme = settingsManager.settings.getTheme()
             engine.dockPreviousView()
+            // TODO if settings changed, prompt user if they want to apply it with modal
+        }))
+
+        btnApply.processComponentEvents(ComponentEventType.ACTIVATED, Functions.fromConsumer(Consumer {
+            engine.setColorTheme(colorTheme) // sets theme in to settings too
+            settingsManager.settings.fullscreen = chckBoxFullscreen.checkBoxState == DefaultCheckBox.CheckBoxState.CHECKED
+            settingsManager.settings.resolution = resolution
+            // TODO prompt user to restart with modal
         }))
 
         /* -- ADDING COMPONENTS -- */
