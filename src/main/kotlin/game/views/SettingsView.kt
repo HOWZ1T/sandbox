@@ -12,6 +12,7 @@ import org.hexworks.zircon.api.Functions
 import org.hexworks.zircon.api.builder.component.ModalBuilder
 import org.hexworks.zircon.api.component.ColorTheme
 import org.hexworks.zircon.api.component.ComponentAlignment
+import org.hexworks.zircon.api.component.Panel
 import org.hexworks.zircon.api.component.modal.Modal
 import org.hexworks.zircon.api.data.Size
 import org.hexworks.zircon.api.graphics.BoxType
@@ -20,13 +21,11 @@ import org.hexworks.zircon.api.uievent.ComponentEventType
 import org.hexworks.zircon.api.uievent.Processed
 import org.hexworks.zircon.api.view.base.BaseView
 import org.hexworks.zircon.internal.component.impl.DefaultCheckBox
-import org.hexworks.zircon.internal.component.modal.EmptyModalResult
-import java.util.function.Consumer
 
 class SettingsView(engine: Engine) : BaseView(engine.tileGrid(), engine.colorTheme()) {
     private var settingsManager: SettingsManager = SettingsManager.getInstance(engine.title())
-    private lateinit var colorTheme: ColorTheme;
-    private lateinit var resolution: Resolution;
+    private var colorTheme: ColorTheme
+    private var resolution: Resolution
 
     init {
         colorTheme = settingsManager.settings.getTheme()
@@ -115,41 +114,49 @@ class SettingsView(engine: Engine) : BaseView(engine.tileGrid(), engine.colorThe
 
         /* --   ADDING LOGIC    -- */
 
-        btnResolutionNext.processComponentEvents(ComponentEventType.ACTIVATED, Functions.fromConsumer(Consumer {
+        btnResolutionNext.processComponentEvents(ComponentEventType.ACTIVATED, Functions.fromConsumer {
             resolution = engine.nextResolution(resolution)
             lblCurResolution.text = centerPad(resolution.sizeAsStr(), 13)
-        }))
+        })
 
-        btnResolutionPrev.processComponentEvents(ComponentEventType.ACTIVATED, Functions.fromConsumer(Consumer {
+        btnResolutionPrev.processComponentEvents(ComponentEventType.ACTIVATED, Functions.fromConsumer {
             resolution = engine.prevResolution(resolution)
             lblCurResolution.text = centerPad(resolution.sizeAsStr(), 13)
-        }))
+        })
 
-        btnThemeNext.processComponentEvents(ComponentEventType.ACTIVATED, Functions.fromConsumer(Consumer {
+        btnThemeNext.processComponentEvents(ComponentEventType.ACTIVATED, Functions.fromConsumer {
             colorTheme = engine.nextColorTheme(colorTheme)
             lblCurTheme.text = centerPad(engine.colorThemeName(colorTheme), 26)
             screen.theme = colorTheme
-        }))
+        })
 
-        btnThemePrev.processComponentEvents(ComponentEventType.ACTIVATED, Functions.fromConsumer(Consumer {
+        btnThemePrev.processComponentEvents(ComponentEventType.ACTIVATED, Functions.fromConsumer {
             colorTheme = engine.prevColorTheme(colorTheme)
             lblCurTheme.text = centerPad(engine.colorThemeName(colorTheme), 26)
             screen.theme = colorTheme
-        }))
+        })
 
-        btnBack.processComponentEvents(ComponentEventType.ACTIVATED, Functions.fromConsumer(Consumer {
+        btnBack.processComponentEvents(ComponentEventType.ACTIVATED, Functions.fromConsumer {
             // have settings been changed ?
             if (theme != settingsManager.settings.getTheme() || resolution != settingsManager.settings.resolution
-                || chckBoxFullscreen.isSelected != settingsManager.settings.fullscreen) {
-                // TODO
+                || chckBoxFullscreen.isSelected != settingsManager.settings.fullscreen
+            ) {
                 val modal = createDoApplyModal(screen, theme)
                 modal.onClosed {
                     if (it.accepted()) {
                         engine.setColorTheme(theme)
                         settingsManager.settings.resolution = resolution
                         settingsManager.settings.fullscreen = chckBoxFullscreen.isSelected
-                        // TODO NOTIFY OF REQUIRED RESTART
-                        engine.dockPreviousView()
+
+                        val modalRestart = createRestartRequiredModal(screen, theme)
+                        modalRestart.onClosed { jt ->
+                            if (jt.accepted()) {
+                                engine.shutdown()
+                            } else {
+                                engine.dockPreviousView()
+                            }
+                        }
+                        screen.openModal(modalRestart)
                     } else {
                         screen.theme = settingsManager.settings.getTheme()
                         lblCurResolution.text = centerPad(settingsManager.settings.resolution.sizeAsStr(), 13)
@@ -166,12 +173,13 @@ class SettingsView(engine: Engine) : BaseView(engine.tileGrid(), engine.colorThe
                 chckBoxFullscreen.isSelected = settingsManager.settings.fullscreen
                 engine.dockPreviousView()
             }
-        }))
+        })
 
-        btnApply.processComponentEvents(ComponentEventType.ACTIVATED, Functions.fromConsumer(Consumer {
+        btnApply.processComponentEvents(ComponentEventType.ACTIVATED, Functions.fromConsumer {
             // have settings been changed ?
             if (theme != settingsManager.settings.getTheme() || resolution != settingsManager.settings.resolution
-                || chckBoxFullscreen.isSelected != settingsManager.settings.fullscreen) {
+                || chckBoxFullscreen.isSelected != settingsManager.settings.fullscreen
+            ) {
                 engine.setColorTheme(colorTheme) // sets theme in to settings too
                 settingsManager.settings.fullscreen =
                     chckBoxFullscreen.checkBoxState == DefaultCheckBox.CheckBoxState.CHECKED
@@ -190,7 +198,7 @@ class SettingsView(engine: Engine) : BaseView(engine.tileGrid(), engine.colorThe
             } else {
                 engine.dockPreviousView()
             }
-        }))
+        })
         
         /* -- ADDING COMPONENTS -- */
         hboxResolution.addComponents(lblResolution, btnResolutionPrev, lblCurResolution, btnResolutionNext)
@@ -202,24 +210,7 @@ class SettingsView(engine: Engine) : BaseView(engine.tileGrid(), engine.colorThe
         screen.addComponents(vboxSettings)
     }
 
-    private fun createDoApplyModal(screen: Screen, colorTheme: ColorTheme) : Modal<BooleanModalResult> {
-        val panel = Components.panel()
-            .withSize(Size.create(34, 8))
-            .withDecorations(ComponentDecorations.box(), ComponentDecorations.shadow())
-            .build()
-
-        val modal = ModalBuilder.newBuilder<BooleanModalResult>()
-            .withComponent(panel)
-            .withParentSize(screen.size)
-            .withColorTheme(colorTheme)
-            .build()
-
-        val paraMsg = Components.paragraph()
-            .withText("Do you want to apply changes?")
-            .withPosition(1, 1)
-            .withSize(29, 3)
-            .build()
-
+    private fun addYesNoButtons(modal: Modal<BooleanModalResult>, panel: Panel) {
         val btnNo = Components.button()
             .withText(" NO ")
             .withAlignmentWithin(panel, ComponentAlignment.BOTTOM_LEFT)
@@ -242,7 +233,29 @@ class SettingsView(engine: Engine) : BaseView(engine.tileGrid(), engine.colorThe
             }
         btnYes.moveLeftBy(1)
 
-        panel.addComponents(paraMsg, btnNo, btnYes)
+        panel.addComponents(btnNo, btnYes)
+    }
+
+    private fun createDoApplyModal(screen: Screen, colorTheme: ColorTheme) : Modal<BooleanModalResult> {
+        val panel = Components.panel()
+            .withSize(Size.create(34, 8))
+            .withDecorations(ComponentDecorations.box(), ComponentDecorations.shadow())
+            .build()
+
+        val modal = ModalBuilder.newBuilder<BooleanModalResult>()
+            .withComponent(panel)
+            .withParentSize(screen.size)
+            .withColorTheme(colorTheme)
+            .build()
+
+        val paraMsg = Components.paragraph()
+            .withText("Do you want to apply changes?")
+            .withPosition(1, 1)
+            .withSize(29, 3)
+            .build()
+
+        panel.addComponent(paraMsg)
+        addYesNoButtons(modal, panel)
         return modal
     }
 
@@ -266,29 +279,8 @@ class SettingsView(engine: Engine) : BaseView(engine.tileGrid(), engine.colorThe
             .withSize(29, 6)
             .build()
 
-        val btnNo = Components.button()
-            .withText(" NO ")
-            .withAlignmentWithin(panel, ComponentAlignment.BOTTOM_LEFT)
-            .build().apply {
-                handleComponentEvents(ComponentEventType.ACTIVATED) {
-                    modal.close(BooleanModalResult(false))
-                    Processed
-                }
-            }
-        btnNo.moveRightBy(16)
-
-        val btnYes = Components.button()
-            .withText(" YES ")
-            .withAlignmentWithin(panel, ComponentAlignment.BOTTOM_RIGHT)
-            .build().apply {
-                handleComponentEvents(ComponentEventType.ACTIVATED) {
-                    modal.close(BooleanModalResult(true))
-                    Processed
-                }
-            }
-        btnYes.moveLeftBy(1)
-
-        panel.addComponents(paraMsg, btnNo, btnYes)
+        panel.addComponent(paraMsg)
+        addYesNoButtons(modal, panel)
         return modal
     }
 }
